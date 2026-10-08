@@ -67,7 +67,7 @@ jobs:
         run: |
           mkdir ddnet/release
           cd ddnet/release
-          cmake -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+          cmake -A x64 "-DEXCEPTION_HANDLING=ON" "-DVULKAN=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=." ..
 
       - name: Build client
         run: |
