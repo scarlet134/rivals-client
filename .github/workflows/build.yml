@@ -16,6 +16,8 @@ jobs:
     runs-on: windows-latest
     env:
       CARGO_HTTP_MULTIPLEXING: false
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
     steps:
       - name: Checkout RIVALS
         uses: actions/checkout@v5
