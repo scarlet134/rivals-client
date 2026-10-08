@@ -81,6 +81,11 @@ jobs:
           s = s.replace("set(PLATFORM_CLIENT_LIBS opengl32 winmm imm32)", "set(PLATFORM_CLIENT_LIBS opengl32 winmm imm32 windowsapp)", 1)
           open(p, "w", encoding="utf-8").write(s)
           print("CMakeLists.txt OK")
+          q = "src/game/client/components/menus_settings.cpp"
+          t = open(q, encoding="utf-8").read()
+          t = re.sub(r",\s*,(\s*\"RIVALS\")", r",\1", t)
+          open(q, "w", encoding="utf-8").write(t)
+          print("menus_settings.cpp OK")
 
       - name: Configure
         run: |
