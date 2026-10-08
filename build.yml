@@ -1,0 +1,99 @@
+name: Build RIVALS Client
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  # База: DDNetGores/client (Tater-Client), релиз 18.0.2
+  # Если сборка сломается после обновления DDNet — поставь тег, например 19.4
+  DDNET_REF: "18.0.2"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+    steps:
+      - name: Checkout RIVALS
+        uses: actions/checkout@v5
+        with:
+          path: rivals
+
+      - name: Checkout DDNet
+        uses: actions/checkout@v5
+        with:
+          repository: DDNetGores/client
+          ref: ${{ env.DDNET_REF }}
+          path: ddnet
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Find RIVALS files
+        shell: pwsh
+        run: |
+          # ищем apply_rivals.py в любой папке репозитория
+          $script = Get-ChildItem -Path rivals -Recurse -Filter apply_rivals.py | Select-Object -First 1
+          if (-not $script) {
+            # файлы загружены архивом .zip - распаковываем сами
+            Get-ChildItem -Path rivals -Recurse -Filter *.zip | ForEach-Object {
+              Write-Host "Unzip $($_.FullName)"
+              Expand-Archive -Path $_.FullName -DestinationPath "rivals_unzipped/$($_.BaseName)" -Force
+            }
+            if (Test-Path rivals_unzipped) {
+              $script = Get-ChildItem -Path rivals_unzipped -Recurse -Filter apply_rivals.py | Select-Object -First 1
+            }
+          }
+          if (-not $script) {
+            Write-Host "NOT FOUND scripts/apply_rivals.py"
+            Get-ChildItem -Path rivals -Recurse | Select-Object -ExpandProperty FullName
+            exit 1
+          }
+          $root = $script.Directory.Parent.FullName
+          Write-Host "RIVALS: $root"
+          "RIVALS_DIR=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Apply RIVALS patches
+        run: python "${{ env.RIVALS_DIR }}/scripts/apply_rivals.py" ddnet
+
+      - name: Configure
+        run: |
+          mkdir ddnet/release
+          cd ddnet/release
+          cmake -A x64 -DEXCEPTION_HANDLING=ON -DVULKAN=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+
+      - name: Build client
+        run: |
+          cd ddnet/release
+          cmake --build . --config Release --target game-client game-server
+
+      - name: Package
+        shell: pwsh
+        run: |
+          cd ddnet/release
+          cmake --build . --config Release --target package_default
+          $zip = Get-ChildItem *-win64.zip | Select-Object -First 1
+          Expand-Archive $zip.FullName -DestinationPath pkg
+          $root = Get-ChildItem pkg -Directory | Select-Object -First 1
+          # свои шрифты из rivals/data/fonts кладём в data/fonts клиента
+          Copy-Item "$env:RIVALS_DIR/data/fonts/*" "$($root.FullName)/data/fonts/" -Include *.ttf,*.otf -ErrorAction SilentlyContinue
+          Rename-Item $root.FullName "RIVALS-Gores-Client"
+          New-Item -ItemType Directory -Force ../../out | Out-Null
+          Compress-Archive -Path pkg/RIVALS-Gores-Client -DestinationPath ../../out/RIVALS-Gores-Client-win64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: RIVALS-Gores-Client-win64
+          path: out/RIVALS-Gores-Client-win64.zip
+
+      - name: Release (on tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/RIVALS-Gores-Client-win64.zip
