@@ -86,6 +86,12 @@ jobs:
           t = re.sub(r",\s*,(\s*\"RIVALS\")", r",\1", t)
           open(q, "w", encoding="utf-8").write(t)
           print("menus_settings.cpp OK")
+          q = "src/game/client/components/rivals/media_session.cpp"
+          t = open(q, encoding="utf-8").read()
+          if "base/detect.h" not in t:
+              t = t.replace('#include "media_session.h"', '#include "media_session.h"\n#include <base/detect.h>', 1)
+          open(q, "w", encoding="utf-8").write(t)
+          print("media_session.cpp OK")
 
       - name: Configure
         run: |
