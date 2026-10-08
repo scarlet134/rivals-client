@@ -92,6 +92,13 @@ jobs:
               t = t.replace('#include "media_session.h"', '#include "media_session.h"\n#include <base/detect.h>', 1)
           open(q, "w", encoding="utf-8").write(t)
           print("media_session.cpp OK")
+          c = open("CMakeLists.txt", encoding="utf-8").read()
+          if "RIVALS_CXX20" not in c:
+              c += ("\n# RIVALS_CXX20\nif(MSVC)\n  set_source_files_properties(src/game/client/components/rivals/media_session.cpp "
+                    "PROPERTIES COMPILE_OPTIONS \"/std:c++20;/EHsc\" "
+                    "COMPILE_DEFINITIONS _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)\nendif()\n")
+              open("CMakeLists.txt", "w", encoding="utf-8").write(c)
+          print("C++20 for media_session OK")
 
       - name: Configure
         run: |
