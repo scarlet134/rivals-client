@@ -100,9 +100,25 @@ jobs:
           cmake -A x64 "-DEXCEPTION_HANDLING=ON" "-DVULKAN=OFF" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=." ..
 
       - name: Build client
+        shell: python
+        working-directory: ddnet/release
         run: |
-          cd ddnet/release
-          cmake --build . --config Release --target game-client game-server
+          import subprocess, sys, re
+          p = subprocess.run(["cmake", "--build", ".", "--config", "Release", "--target", "game-client", "game-server"],
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+          out = p.stdout.decode("utf-8", "replace")
+          print(out)
+          if p.returncode != 0:
+              errs = []
+              for line in out.splitlines():
+                  if re.search(r"error [A-Z]+\d+|: error|fatal error", line) and line not in errs:
+                      errs.append(line.strip())
+              print("=" * 30 + " ОШИБКИ " + "=" * 30)
+              for e in errs[:40]:
+                  e = re.sub(r"^.*?([A-Za-z_]+\.(?:cpp|h)\()", r"\1", e)
+                  print(e)
+                  print("::error::" + e[:400])
+              sys.exit(p.returncode)
 
       - name: Package
         shell: pwsh
