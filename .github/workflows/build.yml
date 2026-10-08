@@ -111,6 +111,12 @@ jobs:
               open(cv, "w", encoding="utf-8").write(t)
           mr = "src/game/client/components/menus_rivals.cpp"
           t = open(mr, encoding="utf-8").read()
+          inc = "src/game/client/components/rivals/optimizer_ui.inc"
+          ms = open("src/game/client/components/menus.h", encoding="utf-8").read()
+          if "Ui()->" not in t or ("UI()->DoLabel" in ms and "Ui()->DoLabel" not in ms):
+              it = open(inc, encoding="utf-8").read().replace("Ui()->", "UI()->")
+              open(inc, "w", encoding="utf-8").write(it)
+              print("optimizer_ui.inc: Ui -> UI")
           if "optimizer_ui.inc" not in t:
               a = "\tMainView.Margin(10.0f, &MainView);\n"
               assert a in t, "menus_rivals anchor"
