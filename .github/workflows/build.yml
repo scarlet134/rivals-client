@@ -63,6 +63,25 @@ jobs:
       - name: Apply RIVALS patches
         run: python "${{ env.RIVALS_DIR }}/scripts/apply_rivals.py" ddnet
 
+      - name: Fix CMake file list
+        shell: python
+        working-directory: ddnet
+        run: |
+          import re, subprocess
+          subprocess.run(["git", "checkout", "--", "CMakeLists.txt"], check=True)
+          p = "CMakeLists.txt"
+          s = open(p, encoding="utf-8").read()
+          new = ["components/menus_rivals.cpp", "components/rivals/media_session.cpp", "components/rivals/media_session.h", "components/rivals/music_hud.cpp", "components/rivals/music_hud.h"]
+          m = re.search(r"set_src\(GAME_CLIENT GLOB_RECURSE src/game/client[ \t]*\n", s)
+          end = re.compile(r"^[ \t]*\)", re.M).search(s, m.end())
+          lines = [l for l in s[m.end():end.start()].split("\n") if l.strip()]
+          indent = re.match(r"[ \t]*", lines[0]).group(0)
+          entries = sorted(set([l.strip() for l in lines] + new))
+          s = s[:m.end()] + "".join(indent + e + "\n" for e in entries) + s[end.start():]
+          s = s.replace("set(PLATFORM_CLIENT_LIBS opengl32 winmm imm32)", "set(PLATFORM_CLIENT_LIBS opengl32 winmm imm32 windowsapp)", 1)
+          open(p, "w", encoding="utf-8").write(s)
+          print("CMakeLists.txt OK")
+
       - name: Configure
         run: |
           mkdir ddnet/release
